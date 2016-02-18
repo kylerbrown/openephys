@@ -23,13 +23,13 @@ def split_file_to_wav(data, sampling_rate, n_channel, max_length, base_file_name
     n_segments = len(data) // max_length
     intervals = [{"start": start_sample,
                   "stop": start_sample + max_length,
-                  "label": "{}_{}.wav".format(base_file_name, start_sample)}
+                  "label": "{}_{:018d}.wav".format(base_file_name, start_sample)}
                  for start_sample in np.arange(n_segments) * max_length]
-    [wavfile.write(x["label"], sampling_rate, data[x["start"]:
-                                                   x["start"] + max_length,
-                                               n_channel])
-     for x in intervals]
+    for x in intervals:
+        subdata = data[x["start"]:x["start"] + max_length, n_channel]
+        wavfile.write(x["label"], sampling_rate, subdata - int(np.mean(subdata)))
     return intervals
+
 
 def minutes_to_samples(minutes, sampling_rate):
      """
@@ -40,6 +40,7 @@ def minutes_to_samples(minutes, sampling_rate):
          return int(minutes * 60. * sampling_rate)
      else:
          return np.inf
+
 
 def save_intervals(filename, intervals):
     """
@@ -56,6 +57,8 @@ def save_intervals(filename, intervals):
         [f.write("{},{},{}\n".format(x["start"], x["stop"],
                                   x["label"]))
          for x in intervals]
+
+
 def main(kwikfiles, n_channel, max_minutes, verbose=False):
     for kwikfile in kwikfiles:
         verbose and print(kwikfile)
@@ -71,6 +74,7 @@ def main(kwikfiles, n_channel, max_minutes, verbose=False):
         intervals = split_file_to_wav(dfile["data"], sampling_rate,
                                       n_channel, max_length, basename)
         save_intervals(basename + "_intervals.csv", intervals)
+
 
 if __name__ == "__main__":
     p = argparse.ArgumentParser(
