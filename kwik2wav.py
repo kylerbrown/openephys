@@ -54,6 +54,7 @@ def save_intervals(filename, intervals):
          with the fields: start, stop, label
     """
     with open(filename, "w") as f:
+        f.write("start,stop,label\n")  # header
         [f.write("{},{},{}\n".format(x["start"], x["stop"],
                                   x["label"]))
          for x in intervals]
