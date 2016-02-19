@@ -46,7 +46,7 @@ def thresh_met(x, threshold, less_than):
         return x > threshold
 
 
-def main(csvfile, outfile, feature, less_than, threshold):
+def main(csvfile, outfile, feature, less_than, threshold, minimum_size):
     f1, reader = open_csvfile(csvfile)
     writer_fieldnames = reader.fieldnames.copy()
     writer_fieldnames.insert(1, "duration")
@@ -54,7 +54,6 @@ def main(csvfile, outfile, feature, less_than, threshold):
     in_segment = False
     feature_average_names = set(reader.fieldnames.copy())
     feature_average_names.remove("sample")
-    feature_averages = {x: [] for x in feature_average_names}
     for row in reader:
         if thresh_met(float(row[feature]), threshold, less_than):
             if not in_segment:
@@ -73,12 +72,13 @@ def main(csvfile, outfile, feature, less_than, threshold):
                 in_segment = False
                 # compute duration
                 duration = int(row["sample"]) - start_sample
-                # compute feature means
-                features = {k: sum(v)/len(v) for k, v in feature_averages.items()}
-                features["sample"] = start_sample
-                features["duration"] = duration
-                # write data to file
-                writer.writerow(features)
+                if duration > minimum_size:
+                    # compute feature means
+                    features = {k: sum(v)/len(v) for k, v in feature_averages.items()}
+                    features["sample"] = start_sample
+                    features["duration"] = duration
+                    # write data to file
+                    writer.writerow(features)
             else:
                 # thresh not met and not in segment, nothing to do
                 pass
@@ -98,5 +98,8 @@ if __name__ == "__main__":
                    help="threshold for feature, must match a column from the header \
                    of the csv file")
     p.add_argument("-o", "--out", help="name of output file", default="segments.csv")
+    p.add_argument("--minimum-size", help="minimum size of a segment in samples",
+                   type=int, default=1500)
     options = p.parse_args()
-    main(options.csvfile, options.out, options.feature, options.less_than, options.threshold)
+    main(options.csvfile, options.out, options.feature, options.less_than, options.threshold,
+         options.minimum_size)
