@@ -69,20 +69,41 @@ class PointBrowser(object):
                             transform=ax.transAxes, va='top')
         self.selected, = ax.plot([xs.iloc[0]], [ys.iloc[0]], 'o', ms=12, alpha=0.4,
                                  color='yellow', visible=False)
+        self.label_mode = False
 
     def onpress(self, event):
         if self.lastind is None:
             return
-        if event.key not in ('n', 'p'):
-            return
-        if event.key == 'n':
-            inc = 1
-        else:
-            inc = -1
-
-        self.lastind += inc
-        self.lastind = np.clip(self.lastind, 0, len(self.xs) - 1)
-        self.update()
+        elif self.label_mode:
+            print("label set to {}".format(event.key))
+            self.X.loc[self.lastind, "label"] = event.key
+            self.label_mode = False
+            self.update()
+        elif event.key in ('n', 'p'):
+            if event.key == 'n':
+                inc = 1
+            else:
+                inc = -1
+            self.lastind += inc
+            self.lastind = np.clip(self.lastind, 0, len(self.xs) - 1)
+            self.update()
+        elif event.key in ('a',):
+            self.label_mode = True
+        elif event.key == 'h':
+            help_fig = plt.figure(2)
+            help_ax = help_fig.add_subplot(111)
+            help_ax.set_title('help')
+            help_ax.text(0.01, 0.95,"""Keyboard commands:
+            n - next point
+            p - previous point
+            a - label point
+            c - cluster (label points first)
+            s - save cluster file
+            h - show this message""",
+                    verticalalignment='top', horizontalalignment='left',
+                    transform=help_ax.transAxes,
+                    fontsize=15)
+            plt.show()
 
     def onpick(self, event):
 
@@ -121,9 +142,7 @@ class PointBrowser(object):
                                            int(self.X["duration"].iloc[dataind]),
                                            self.wavpath+wavfilename)
         ax2.plot(data)
-        ax2.text(0.05, 0.9, 'hey! you clicked on {}, from file \n {}\n{}'.format(dataind,
-                                                                                 wavfilename,
-                                                                                 file_sample),
+        ax2.text(0.05, 0.9, 'label: {}'.format(self.X["label"].iloc[dataind]),
                  transform=ax2.transAxes, va='top')
         #ax2.set_ylim(-0.5, 1.5)
         self.selected.set_visible(True)
@@ -131,6 +150,7 @@ class PointBrowser(object):
 
         self.text.set_text('selected: %d' % dataind)
         self.fig.canvas.draw()
+        self.label_mode = False
 
 
 def find_PCAs(df, n=2, whiten=True, drop=("sample")):
@@ -150,6 +170,7 @@ def main(segment_file, interval_file, wavpath):
     filemap = pd.read_csv(interval_file)
     data = pd.read_csv(segment_file)
     datapca = find_PCAs(data, n=4)
+    datapca["label"] = None
     X = datapca
     xs = datapca["duration"]
     ys = datapca["pitch"]
