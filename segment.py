@@ -46,16 +46,23 @@ def thresh_met(x, threshold, less_than):
         return x > threshold
 
 
-def main(csvfile, outfile, feature, less_than, threshold, minimum_size):
+def main(csvfile, outfile, feature, less_than, threshold, minimum_size,
+         sap_segment=None):
     f1, reader = open_csvfile(csvfile)
     writer_fieldnames = reader.fieldnames.copy()
     writer_fieldnames.insert(1, "duration")
     f2, writer = open_writefile(outfile, writer_fieldnames)
+    if sap_segment:
+        f3, thresh_reader = open_csvfile(sap_segment)
     in_segment = False
     feature_average_names = set(reader.fieldnames.copy())
     feature_average_names.remove("sample")
     for row in reader:
-        if thresh_met(float(row[feature]), threshold, less_than):
+        if sap_segment:
+            thresh = int(next(thresh_reader)["threshold"])
+        else:
+            thresh = thresh_met(float(row[feature]), threshold, less_than)
+        if thresh:
             if not in_segment:
                 # start a new segment
                 in_segment = True
@@ -100,6 +107,7 @@ if __name__ == "__main__":
     p.add_argument("-o", "--out", help="name of output file", default="segments.csv")
     p.add_argument("--minimum-size", help="minimum size of a segment in samples",
                    type=int, default=1500)
+    p.add_argument("--sap-segment", help="use an SAP segmentation file")
     options = p.parse_args()
     main(options.csvfile, options.out, options.feature, options.less_than, options.threshold,
-         options.minimum_size)
+         options.minimum_size, options.sap_segment)
