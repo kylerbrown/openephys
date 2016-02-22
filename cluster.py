@@ -14,7 +14,6 @@ import matplotlib.pyplot as plt
 from sklearn.decomposition import PCA
 import numpy as np
 from scipy.io import wavfile
-temphack = 1
 
 def get_raw_data(sample_start, duration, filename, filetype="wav", pad=0):
     """
@@ -41,7 +40,7 @@ def find_file(sample, filemap):
     returns the file sample and file
     """
     print(sample)
-    sample = sample/temphack
+    sample = sample
     row = filemap[(filemap.start <= sample) & (filemap.stop > sample)]
     print(row)
     return sample - row.start.iloc[0], row.label.iloc[0]
