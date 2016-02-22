@@ -15,9 +15,9 @@ import matplotlib.pyplot as plt
 from sklearn.decomposition import PCA
 import numpy as np
 from scipy.io import wavfile
+import seaborn as sns
 
-
-def cluster(X, labels, n_clusters=7):
+def cluster(x, labels, n_clusters=7):
     """
     Clusters X
 
@@ -37,7 +37,38 @@ def cluster(X, labels, n_clusters=7):
     pass
 
 
-def plot_segment(ax, data, sampling_rate, plot_type, **kwargs):
+def create_palette(x):
+    print(x["label"].unique())
+    return sns.husl_palette(len(x["label"].unique()))
+
+
+def plot_scatter(ax, data, old_lines, x_feature="duration", y_feature="pitch"):
+    """
+    creates a scatter plot from a dataframe, each unique entry in the "label" column gets
+    a unique color
+    """
+    palette = create_palette(data)
+    lines = []
+    for l in old_lines:
+        l.remove()
+        del l
+    x = data[x_feature]
+    y = data[y_feature]
+    for color, label in zip(palette, data["label"].unique()):
+        x1 =x[data["label"]==label]
+        y1 = y[data["label"]==label]
+        l, = ax.plot(x1, y1, 'o', color=color, alpha=.7, picker=5)
+        lines.append(l)
+    plt.sca(ax)
+    plt.xlabel(x_feature)
+    plt.ylabel(y_feature)
+    plt.xlim(np.min(x), np.max(x))
+    plt.ylim(np.min(y), np.max(y))
+    return lines, data[x_feature], data[y_feature]
+
+
+
+def plot_segment(ax, data, pad, sampling_rate, plot_type, **kwargs):
     """
     plots data for a segment
 
@@ -45,6 +76,7 @@ def plot_segment(ax, data, sampling_rate, plot_type, **kwargs):
     data:
     sampling_rate:
     plot_type: either "oscillogram" or "spectrogram"
+    pad: number of extra samples on each side of the data
 
     returns
     -------
@@ -56,16 +88,16 @@ def plot_segment(ax, data, sampling_rate, plot_type, **kwargs):
     elif plot_type == "spectrogram":
         # parameters from SAP
         NFFT = 1024
-        FFT_step = 10
-        FFT_size = 400
+        FFT_step = 40
+        #FFT_size = 400
         frequency_range = 0.5
         plt.sca(ax)
-        plt.specgram(data, NFFT=NFFT, Fs=sampling_rate, noverlap=FFT_step)
+        plt.specgram(data, NFFT=NFFT, Fs=sampling_rate, noverlap=NFFT-FFT_step)
         plt.ylim(0, sampling_rate / 2. * frequency_range)
     return ax
 
 
-def get_raw_data(sample_start, duration, filename, filetype="wav", pad=0):
+def get_raw_data(sample_start, duration, filename, filetype="wav", pad=1000):
     """
     sample_start: sample number in file
     duration: length of segment in samples
@@ -80,8 +112,8 @@ def get_raw_data(sample_start, duration, filename, filetype="wav", pad=0):
     """
     if filetype == "wav":
         sampling_rate, fulldata = wavfile.read(filename, mmap=True)
-    data = fulldata[sample_start:sample_start + duration]
-    return sampling_rate, data
+    data = fulldata[sample_start - pad: sample_start + duration + pad]
+    return sampling_rate, data, pad
 
 
 def find_file(sample, filemap):
@@ -89,10 +121,8 @@ def find_file(sample, filemap):
     input: a master sample and filemap dataframe
     returns the file sample and file
     """
-    print(sample)
     sample = sample
     row = filemap[(filemap.start <= sample) & (filemap.stop > sample)]
-    print(row)
     return sample - row.start.iloc[0], row.label.iloc[0]
 
 
@@ -103,10 +133,10 @@ class PointBrowser(object):
     and 'p' keys to browse through the next and previous points
     """
 
-    def __init__(self, fig, ax, ax2, xs, ys, X, line, filemap, wavpath):
+    def __init__(self, fig, ax, ax2, xs, ys, X, lines, filemap, wavpath):
         self.fig = fig
         self.plot_type = "spectrogram"  # "oscillogram" or "spetrogram"
-        self.line = line
+        self.lines = lines
         self.ax = ax
         self.ax2 = ax2
         self.lastind = 0
@@ -137,6 +167,7 @@ class PointBrowser(object):
             self.X.loc[self.lastind, "label"] = event.key
             self.label_mode = False
             self.update()
+            self.lines, self.xs, self.ys = plot_scatter(self.ax, self.X, self.lines)
         elif event.key in ('n', 'p'):
             if event.key == 'n':
                 inc = 1
@@ -150,6 +181,12 @@ class PointBrowser(object):
         elif event.key == 'u':
             #cluster
             self.X = cluster(self.X)
+        elif event.key == 't':
+            if self.plot_type == "oscillogram":
+                self.plot_type = "spectrogram"
+            elif self.plot_type == "spectrogram":
+                self.plot_type = "oscillogram"
+            self.update()
         elif event.key == 'h':
             help_fig = plt.figure(2)
             help_ax = help_fig.add_subplot(111)
@@ -162,6 +199,7 @@ class PointBrowser(object):
             a - lAbel point
             u - cluster (label points first)
             s - Save cluster file
+            t - cycle plot type
             h - Help, show this message""",
                          verticalalignment='top',
                          horizontalalignment='left',
@@ -170,25 +208,28 @@ class PointBrowser(object):
             plt.show()
 
     def onpick(self, event):
-
-        if event.artist != self.line:
-            print('not line')
-            return True
-        print(event)
-        print(event.ind)
+        #print(event.artist)
+        #print(self.lines)
+        #if event.artist not in self.lines:
+        #    print('not line')
+        #    return True
         N = len(event.ind)
         if not N:
             return True
-
         # the click locations
         x = event.mouseevent.xdata
         y = event.mouseevent.ydata
-        distances = np.array(np.hypot(x - self.xs.iloc[event.ind], y -
-                                      self.ys.iloc[event.ind]))
+        if x == None or y == None:
+            return True
+        print("on pick debug")
+        print("x: {}, y: {}".format(x, y))
+        print("event.ind: {}".format(event.ind))
+        distances = np.array(np.hypot(x - self.xs, y -
+                                      self.ys))
         print(distances)
         indmin = distances.argmin()
         print(indmin)
-        dataind = event.ind[indmin]
+        dataind = indmin
         self.lastind = dataind
         self.update()
         return event
@@ -202,19 +243,19 @@ class PointBrowser(object):
         file_sample, wavfilename = find_file(master_sample_start, self.filemap)
         ax2 = self.ax2
         ax2.cla()
-        sampling_rate, data = get_raw_data(
+        sampling_rate, data, pad = get_raw_data(
             file_sample, int(self.X["duration"].iloc[dataind]),
             self.wavpath + wavfilename)
-        plot_segment(ax2, data, sampling_rate, self.plot_type)
-        #ax2.plot(data)
+        plot_segment(ax2, data, pad, sampling_rate, self.plot_type)
         ax2.text(0.05,
                  0.9,
                  'label: {}'.format(self.X["label"].iloc[dataind]),
                  transform=ax2.transAxes,
                  va='top')
-        #ax2.set_ylim(-0.5, 1.5)
         self.selected.set_visible(True)
         self.selected.set_data(self.xs.iloc[dataind], self.ys.iloc[dataind])
+        print("selected x: {}".format(self.xs.iloc[dataind]))
+        print("selected y: {}".format(self.ys.iloc[dataind]))
 
         self.text.set_text('selected: %d' % dataind)
         self.fig.canvas.draw()
@@ -239,14 +280,17 @@ def main(segment_file, interval_file, wavpath):
     filemap = pd.read_csv(interval_file)
     data = pd.read_csv(segment_file)
     datapca = find_PCAs(data, n=4)
-    datapca["label"] = None
+    datapca["label"] = "no-label"
     X = datapca
-    xs = datapca["PCA1"]
-    ys = datapca["PCA2"]
+    xs = datapca["duration"]
+    ys = datapca["pitch"]
     fig, (ax, ax2) = plt.subplots(2, 1)
     ax.set_title("Kyler's most amazing cluster program")
+    plt.sca(ax)
+    plt.xlim(np.min(xs), np.max(xs))
+    plt.ylim(np.min(ys), np.max(ys))
     line, = ax.plot(xs, ys, 'o', picker=5)  # 5 point tolerance
-    browser = PointBrowser(fig, ax, ax2, xs, ys, X, line, filemap, wavpath)
+    browser = PointBrowser(fig, ax, ax2, xs, ys, X, (line,), filemap, wavpath)
     fig.canvas.mpl_connect('pick_event', browser.onpick)
     fig.canvas.mpl_connect('key_press_event', browser.onpress)
     plt.show(block=True)
