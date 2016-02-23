@@ -42,7 +42,7 @@ def copy(kfile, afile):
 
 def main(kwikfiles):
     for kwikfile in kwikfiles:
-        arf_name = os.path.splitext(kwikfile)[0] + .arf
+        arf_name = os.path.splitext(kwikfile)[0] + ".arf"
         with h5py.File(kwikfile, "r") as kfile, arf.open_file(arf_name, "w") as afile:
             copy(kfile, afile)
 
