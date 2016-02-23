@@ -16,25 +16,46 @@ from sklearn.decomposition import PCA
 import numpy as np
 from scipy.io import wavfile
 import seaborn as sns
+from sklearn.cluster import KMeans
 
-def cluster(x, labels, n_clusters=7):
+
+def cluster(x, labels, **kwargs):
     """
     Clusters X
 
     X: features
     labels: An array of the same length as X, or a number of clusters
-            Cluster labels to use as seed for clustering, `None`s are ignored.
+            Cluster labels to use as seed for clustering, `no-label`s are ignored.
             The number of clusters is dependent on the number of unique labels
-            in the label array. If the label array is None or an array of None
-            n_clusters is used, otherwise n_clusters is ignored.
-            K-means is then seeded by the means of the points of each cluster.
-    n_clusters: The number of clusters
-
+            in the label array. If the label array is None or an array of "no-label"
+            the kmeans defaults are used. K-means is then seeded by the
+            means of the points of each cluster.
+    **kwargs: passed to sklearn.cluster.KMeans
     returns
     -------
     IDs = new labels
     """
-    pass
+    if labels is None or len(set(labels)) == 1:
+        kmeans = KMeans(n_clusters=10, **kwargs)
+        kmeans.fit(x)
+        return kmeans.predict(x)
+    else:
+       ordered_label_set = list(set(labels))
+       if "no-label" in ordered_label_set:
+           ordered_label_set.remove("no-label")
+       n_clusters = len(ordered_label_set)
+       start_means = [np.mean(x[labels==label], 0) for label in ordered_label_set]
+       nd_start_means = np.row_stack(start_means)
+       print(nd_start_means)
+       kmeans = KMeans(n_clusters=len(ordered_label_set),
+                       init=nd_start_means)
+       kmeans_labels = kmeans.fit_predict(x)
+       # map kmeans labels onto original labels
+       for i, label in enumerate(ordered_label_set):
+           labels[kmeans_labels == i] = label
+    return labels
+
+
 
 
 def create_palette(x):
@@ -97,7 +118,7 @@ def plot_segment(ax, data, pad, sampling_rate, plot_type, **kwargs):
     return ax
 
 
-def get_raw_data(sample_start, duration, filename, filetype="wav", pad=1000):
+def get_raw_data(sample_start, duration, filename, filetype="wav", pad=10000):
     """
     sample_start: sample number in file
     duration: length of segment in samples
@@ -159,6 +180,16 @@ class PointBrowser(object):
                                  visible=False)
         self.label_mode = False
 
+    def _cluster(self):
+        X = self.X
+        cluster_features = X
+        for col_name in X:
+            if not col_name.startswith("PCA"):
+                cluster_features = cluster_features.drop(col_name, 1)
+        print(cluster_features.columns)
+        new_labels = cluster(cluster_features, X['label'])
+        self.X["label"] = new_labels
+
     def onpress(self, event):
         if self.lastind is None:
             return
@@ -168,6 +199,8 @@ class PointBrowser(object):
             self.label_mode = False
             self.update()
             self.lines, self.xs, self.ys = plot_scatter(self.ax, self.X, self.lines)
+        elif event.key == ">":
+            self.save_labels()
         elif event.key in ('n', 'p'):
             if event.key == 'n':
                 inc = 1
@@ -180,7 +213,8 @@ class PointBrowser(object):
             self.label_mode = True
         elif event.key == 'u':
             #cluster
-            self.X = cluster(self.X)
+            self._cluster()
+            self.lines, self.xs, self.ys = plot_scatter(self.ax, self.X, self.lines)
         elif event.key == 't':
             if self.plot_type == "oscillogram":
                 self.plot_type = "spectrogram"
@@ -198,7 +232,7 @@ class PointBrowser(object):
             p - Previous point
             a - lAbel point
             u - cluster (label points first)
-            s - Save cluster file
+            > - Save cluster file
             t - cycle plot type
             h - Help, show this message""",
                          verticalalignment='top',
@@ -207,12 +241,18 @@ class PointBrowser(object):
                          fontsize=15)
             plt.show()
 
+    def save_labels(self):
+        """
+        saves labels to csv file, keeping the "sample" and "duration" columns
+        """
+        saved_columns = ("sample", "duration", "label")
+        out_data = self.X
+        for n in self.X.columns:
+            if n not in saved_columns:
+                out_data = out_data.drop(n, 1)
+        out_data.to_csv("labels.csv", index=False)
+        print("labels saved")
     def onpick(self, event):
-        #print(event.artist)
-        #print(self.lines)
-        #if event.artist not in self.lines:
-        #    print('not line')
-        #    return True
         N = len(event.ind)
         if not N:
             return True
@@ -279,7 +319,11 @@ def find_PCAs(df, n=2, whiten=True, drop=("sample")):
 def main(segment_file, interval_file, wavpath):
     filemap = pd.read_csv(interval_file)
     data = pd.read_csv(segment_file)
-    datapca = find_PCAs(data, n=4)
+    data = data.drop("aperiodicity", 1)
+    data = data.drop("goodness", 1)
+    data = data.drop("AM", 1)
+    data = data.drop("FM", 1)
+    datapca = find_PCAs(data, n=3)
     datapca["label"] = "no-label"
     X = datapca
     xs = datapca["duration"]
