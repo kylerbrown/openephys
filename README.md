@@ -1,7 +1,6 @@
-analysis-tools
-==============
+#openephys
 
-Code for loading and converting data saved by the Open Ephys GUI
+A python library and scripts for loading and converting data saved by the Open Ephys GUI
 
 More info on the Open Ephys data format can be found at https://open-ephys.atlassian.net/wiki/display/OEW/Data+format
 
@@ -12,13 +11,4 @@ For Matlab:
 
 For Python:
 - use the 'OpenEphys.py' module for .continuous files, .spikes, and .events files
-- use the 'Kwik.py' module for .kwd files
-
-For MClust:
-- use the 'LoadTT_openephys.m' loading engine
-
-For Plexon Offline Sorter:
-- use the 'ephys2plx' library
-
-Please submit any bug reports and feature requests to https://github.com/open-ephys/analysis-tools/issues
-
+- use the 'kwik.py' module for .kwd files
