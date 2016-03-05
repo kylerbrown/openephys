@@ -2,7 +2,7 @@
 
 from __future__ import division, print_function, unicode_literals #py2 compatibility
 import numpy as np
-from Kwik import load
+from kwik import load
 from scipy.io import wavfile
 import argparse
 

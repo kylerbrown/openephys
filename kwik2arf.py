@@ -6,7 +6,7 @@
 
 import os.path
 import arf
-import Kwik
+import kwik
 
 
 def copy(kfile, afile):
