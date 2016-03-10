@@ -1,13 +1,14 @@
 #!/usr/bin/python
 
-from __future__ import division, print_function, unicode_literals #py2 compatibility
+from __future__ import division, print_function, unicode_literals
 import numpy as np
-from kwik import load
+from openephys.kwik import load
 from scipy.io import wavfile
 import argparse
 
 
-def split_file_to_wav(data, sampling_rate, n_channel, max_length, base_file_name):
+def split_file_to_wav(data, sampling_rate, n_channel, max_length,
+                      base_file_name):
     """
     Splits data into smaller subfiles of same length.
     Files use the following convention for naming:
@@ -23,23 +24,25 @@ def split_file_to_wav(data, sampling_rate, n_channel, max_length, base_file_name
     n_segments = len(data) // max_length
     intervals = [{"start": start_sample,
                   "stop": start_sample + max_length,
-                  "label": "{}_{:018d}.wav".format(base_file_name, start_sample)}
+                  "label":
+                  "{}_{:013d}.wav".format(base_file_name, start_sample)}
                  for start_sample in np.arange(n_segments) * max_length]
     for x in intervals:
         subdata = data[x["start"]:x["start"] + max_length, n_channel]
-        wavfile.write(x["label"], sampling_rate, subdata - int(np.mean(subdata)))
+        wavfile.write(x["label"], sampling_rate,
+                      subdata - int(np.mean(subdata)))
     return intervals
 
 
 def minutes_to_samples(minutes, sampling_rate):
-     """
+    """
      converts a floating point minute value into an
      integer number of samples, unless infinity, then returns float inf
      """
-     if minutes < np.inf:
-         return int(minutes * 60. * sampling_rate)
-     else:
-         return np.inf
+    if minutes < np.inf:
+        return int(minutes * 60. * sampling_rate)
+    else:
+        return np.inf
 
 
 def save_intervals(filename, intervals):
@@ -55,8 +58,7 @@ def save_intervals(filename, intervals):
     """
     with open(filename, "w") as f:
         f.write("start,stop,label\n")  # header
-        [f.write("{},{},{}\n".format(x["start"], x["stop"],
-                                  x["label"]))
+        [f.write("{},{},{}\n".format(x["start"], x["stop"], x["label"]))
          for x in intervals]
 
 
@@ -72,8 +74,8 @@ def main(kwikfiles, n_channel, max_minutes, verbose=False):
         verbose and print("shape:{}\tsampling rate:{}".format(dfile[
             "data"].shape, sampling_rate))
         max_length = minutes_to_samples(max_minutes, sampling_rate)
-        intervals = split_file_to_wav(dfile["data"], sampling_rate,
-                                      n_channel, max_length, basename)
+        intervals = split_file_to_wav(dfile["data"], sampling_rate, n_channel,
+                                      max_length, basename)
         save_intervals(basename + "_intervals.csv", intervals)
 
 
@@ -87,7 +89,10 @@ if __name__ == "__main__":
                    help="channel to extract, last channel by default",
                    default=-1,
                    type=int)
-    p.add_argument("-m", "--minutes", type=float, default=np.inf,
+    p.add_argument("-m",
+                   "--minutes",
+                   type=float,
+                   default=np.inf,
                    help="maximum number of minutes per wav file, \
                    default is {}".format(np.inf))
     p.add_argument("-v", "--verbose", action="store_true", default=False)

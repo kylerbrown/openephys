@@ -8,12 +8,12 @@ import os.path
 import numpy as np
 import h5py
 import arf
-import kwik
+import openephy.kwik as kwik
 
 
 def copy(kfile, afile, datatypes=0):
     """
-    copies the contents of .kwd hdf5 file to a .ard hdf5 file
+    copies the contents of .kwd hdf5 file to a .arf hdf5 file
     """
 
     # copy top level attributes
