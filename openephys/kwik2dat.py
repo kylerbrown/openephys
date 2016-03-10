@@ -26,7 +26,7 @@ def write_binary(filename, data, channels=()):
             f.write(buffer.tobytes())
 
 
-def main(filename, channels=(), recordings=()):
+def main(filename, channels=(), recordings=(), klustafiles=False):
     if recordings:
         all_data = [load(filename, x) for x in recordings]
     else:
@@ -44,11 +44,12 @@ def main(filename, channels=(), recordings=()):
         dat_filenames.append(binary_filename)
         write_binary(binary_filename, data["data"], channels)
 
-    prb_filename = root_filename + ".prb"
-    dummy_prb_file(prb_filename, n_channels)
-    prm_filename = root_filename + ".prm"
-    dummy_prm_file(prm_filename, prb_filename, dat_filenames, sampling_rate,
-                   n_channels)
+    if klustafiles:
+        prb_filename = root_filename + ".prb"
+        dummy_prb_file(prb_filename, n_channels)
+        prm_filename = root_filename + ".prm"
+        dummy_prm_file(prm_filename, prb_filename, dat_filenames, sampling_rate,
+                    n_channels)
 
 
 if __name__ == "__main__":
@@ -69,7 +70,8 @@ if __name__ == "__main__":
                    nargs="+",
                    type=int)
     p.add_argument("--klustafiles",
-                   help="creates template files for klustakwik/phy")
+                   help="creates template files for klustakwik/phy EXPERIMENTAL",
+                   action="store_true")
     options = p.parse_args()
     main(options.kwdfile, options.channels, options.recordings,
          options.klustafiles)
