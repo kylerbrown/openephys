@@ -1,6 +1,8 @@
 #openephys
 
-A python library and scripts for loading and converting data saved by the Open Ephys GUI
+A python library and scripts for loading and converting data saved by the Open Ephys GUI.
+
+Python 2/3 compatible.
 
 More info on the Open Ephys data format can be found at https://open-ephys.atlassian.net/wiki/display/OEW/Data+format
 
