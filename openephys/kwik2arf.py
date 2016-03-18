@@ -8,7 +8,7 @@ import os.path
 import numpy as np
 import h5py
 import arf
-import openephy.kwik as kwik
+import openephys.kwik as kwik
 
 
 def copy(kfile, afile, datatypes=0):
