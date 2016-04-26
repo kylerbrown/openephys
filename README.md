@@ -30,10 +30,11 @@ For Python:
 
 
         data_offset    = 0                    # Length of the header ('MCS' is auto for MCS file)
-        mapping        = 3SU.prb     # Mapping of the electrode (see http://spyking-circus.rtfd.ord)
+        mapping        = probe_map.prb     # Mapping of the electrode (see http://spyking-circus.rtfd.ord)
         data_dtype     = int16                 # Type of the data
+        sampling_rate  = 30000                  # Sampling rate of the data [Hz]
 
-* Here the file 3SU.prb is an example probe file for 3 independent electrodes. You're going to want to use a different .prb file, one that matches your array. Here's the contents of file, placed in the same directory:
+* Here the file probe_map.prb is an example probe file for 3 independent electrodes. You're going to want to use a different .prb file, one that matches your array. Here's the contents of file, placed in the same directory:
 
 
         total_nb_channels = 3
