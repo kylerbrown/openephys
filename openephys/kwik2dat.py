@@ -13,7 +13,7 @@ from openephys.klustafiles import _prm_file, _prb_group
 BUFFERSIZE = 131072
 
 
-def write_binary(filename, data, channels=()):
+def write_binary(filename, data, channels=(), ref_channel=None):
     if not data.dtype == np.int16:
         raise TypeError("data should be of type int16")
     if not channels:
@@ -23,10 +23,13 @@ def write_binary(filename, data, channels=()):
         for i in range(int(data.shape[0] / n_rows) + 1):
             index = i * n_rows
             buffer = data[index:index + n_rows, channels]
+            if ref_channel:
+                ref_buffer = np.reshape(data[index:index + n_rows, ref_channel], (-1,1))
+                buffer = buffer - ref_buffer
             f.write(buffer.tobytes())
 
 
-def main(filename, channels=(), recordings=(), klustafiles=False):
+def main(filename, channels=(), recordings=(), klustafiles=False, ref_channel=None):
     if recordings:
         all_data = [load(filename, x) for x in recordings]
     else:
@@ -42,7 +45,7 @@ def main(filename, channels=(), recordings=(), klustafiles=False):
         binary_filename = "{fname}_{i}.dat".format(fname=root_filename,
                                                    i=group_i)
         dat_filenames.append(binary_filename)
-        write_binary(binary_filename, data["data"], channels)
+        write_binary(binary_filename, data["data"], channels, ref_channel)
 
     if klustafiles:
         prb_filename = root_filename + ".prb"
@@ -72,6 +75,9 @@ if __name__ == "__main__":
     p.add_argument("--klustafiles",
                    help="creates template files for klustakwik/phy EXPERIMENTAL",
                    action="store_true")
+    p.add_argument("--reference",
+                   help="Reference channel to subtract from CHANNELS, none by default",
+                   type=int)
     options = p.parse_args()
     main(options.kwdfile, options.channels, options.recordings,
-         options.klustafiles)
+         options.klustafiles, options.reference)
