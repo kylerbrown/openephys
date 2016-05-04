@@ -26,7 +26,7 @@ For Python:
 * Obtain source code from [here](http://spyking-circus.readthedocs.org/en/latest/introduction/download.html). Follow the install instructions. Spyking circus has good documentation, so you may want to spend some time reading through it.
 * Convert raw.kwd file to a raw binary, for example: `kwik2dat.py experiment1_100.raw.kwd`. If only some channels contain neural data, run `kwik2dat.py experiement1_100.raw.kwd -c 6 7 8`, where `6 7 8` are the zero indexed channel numbers. (You can use `h5ls -r experiement1_100.raw.kwd` to see the total number of recorded channels. Or you can export all the channels by leaving out the `-c` flag and view the raw data first in neuroscope)
 * Run `spyking-circus *.dat`, spyking circus will ask if you want to create a parameter file. Say yes. [y ENTER]
-* edit the `.params` file. At a minimum you must change these lines:
+* edit the `.params` file. At a minimum you must change these lines from their default values:
 
 
         data_offset    = 0                    # Length of the header ('MCS' is auto for MCS file)
@@ -34,6 +34,7 @@ For Python:
         data_dtype     = int16                 # Type of the data
         sampling_rate  = 30000                  # Sampling rate of the data [Hz]
 
+`data_offset` is the number of bytes to skip when reading the file, we don't want to skip any. `mapping` is a probe file that defines the geometry of the probe, you'll have to create this file or use a premade one.
 * Here the file probe_map.prb is an example probe file for 3 independent electrodes. You're going to want to use a different .prb file, one that matches your array. Here's the contents of file, placed in the same directory:
 
 
