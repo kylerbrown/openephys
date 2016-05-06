@@ -39,7 +39,7 @@ def copy(kfile, afile, datatypes=0):
         channel_sample_rates = kentry["application_data"].attrs["channel_sample_rates"]
         # kwik files are SxN datasets, while in arf it's N datasets of length S
         for i in range(kdata.shape[1]):
-            dset = arf.create_dataset(e, name=str(i), data=np.array([]),
+            dset = arf.create_dataset(e, name=str(i), data=np.array([],dtype=np.int16),
                                       maxshape=(kdata.shape[0],),
                                       sampling_rate=channel_sample_rates[i],
                                       units='samples', datatype=datatypes[i],
