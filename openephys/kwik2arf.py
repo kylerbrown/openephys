@@ -10,6 +10,8 @@ import h5py
 import arf
 import openephys.kwik as kwik
 
+# number of data points to write at a time, prevents excess memory usage
+BUFFERSIZE = 131072
 
 def copy(kfile, afile, datatypes=0):
     """
@@ -37,11 +39,15 @@ def copy(kfile, afile, datatypes=0):
         channel_sample_rates = kentry["application_data"].attrs["channel_sample_rates"]
         # kwik files are SxN datasets, while in arf it's N datasets of length S
         for i in range(kdata.shape[1]):
-            dset = arf.create_dataset(e, name=str(i),
-                                      data=np.ravel(kdata[:,i]), compression=6,
+            dset = arf.create_dataset(e, name=str(i), data=np.array([],dtype=np.int16),
+                                      maxshape=(kdata.shape[0],),
                                       sampling_rate=channel_sample_rates[i],
-                                      units='samples', datatype=datatypes[i])
+                                      units='samples', datatype=datatypes[i],
+                                      compression=6)
             dset.attrs["bit_volts"] = channel_bit_volts[i]
+            for j in range(int(kdata.shape[0]/BUFFERSIZE) + 1):
+                index = j*BUFFERSIZE
+                arf.append_data(dset, kdata[index:index + BUFFERSIZE, i])
 
 
 
@@ -59,15 +65,33 @@ def main(kwikfiles, datatypes):
 
 if __name__ == "__main__":
     import argparse
+    from argparse import RawTextHelpFormatter
     p = argparse.ArgumentParser(
         prog="kwik2arf",
-        description="Copies data from a .kwik file to a .arf file")
+        description="Copies data from a .kwik file to a .arf file",
+        formatter_class=RawTextHelpFormatter)
     p.add_argument("kwikfiles", help="input .kwik files", nargs="+")
     p.add_argument("-d", "--datatypes",
-                   help="""integer codes for the datatype of each channel, see
+           help="""integer codes for the datatype of each channel, see
                    https://github.com/melizalab/arf/blob/master/specification.md#datatypes
-                   If more than one code is given, the number of codes must match the number of channels""",
-                   type=int, nargs="+")
+
+                   0    UNDEFINED   undefined or unknown
+                   1    ACOUSTIC    acoustic
+                   2    EXTRAC_HP   extracellular, high-pass (single-unit or multi-unit)
+                   3    EXTRAC_LF   extracellular, local-field
+                   4    EXTRAC_EEG  extracellular, EEG
+                   5    INTRAC_CC   intracellular, current-clamp
+                   6    INTRAC_VC   intracellular, voltage-clamp
+                  23    EXTRAC_RAW  extracellular, wide-band
+                1000    EVENT       generic event times
+                1001    SPIKET      spike event times
+                1002    BEHAVET     behavioral event times
+                2000    INTERVAL    generic intervals
+                2001    STIMI       stimulus presentation intervals
+                2002    COMPONENTL  component (e.g. motif) labels
+
+               If more than one code is given, the number of codes must match the number of channels""",
+               type=int, nargs="+")
 
     options = p.parse_args()
     main(options.kwikfiles, options.datatypes)
