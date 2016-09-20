@@ -52,13 +52,13 @@ def copy(kfile, afile, datatypes=0):
 
 
 
-def main(kwikfiles, datatypes):
+def main(kwikfile, datatypes, arf_name):
     if not  datatypes:
         datatypes = [0]
-    for kwikfile in kwikfiles:
+    if not arf_name:
         arf_name = os.path.splitext(kwikfile)[0] + ".arf"
-        with h5py.File(kwikfile, "r") as kfile, arf.open_file(arf_name, "w") as afile:
-            copy(kfile, afile, datatypes)
+    with h5py.File(kwikfile, "r") as kfile, arf.open_file(arf_name, "w") as afile:
+        copy(kfile, afile, datatypes)
 
 
 
@@ -70,7 +70,7 @@ if __name__ == "__main__":
         prog="kwik2arf",
         description="Copies data from a .kwik file to a .arf file",
         formatter_class=RawTextHelpFormatter)
-    p.add_argument("kwikfiles", help="input .kwik files", nargs="+")
+    p.add_argument("kwikfile", help="input .kwik file")
     p.add_argument("-d", "--datatypes",
            help="""integer codes for the datatype of each channel, see
                    https://github.com/melizalab/arf/blob/master/specification.md#datatypes
@@ -92,6 +92,7 @@ if __name__ == "__main__":
 
                If more than one code is given, the number of codes must match the number of channels""",
                type=int, nargs="+")
+    p.add_argument("-o", "--outfile", help="name of output file")
 
     options = p.parse_args()
-    main(options.kwikfiles, options.datatypes)
+    main(options.kwikfile, options.datatypes, options.outfile)

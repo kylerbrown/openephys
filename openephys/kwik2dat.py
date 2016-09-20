@@ -19,7 +19,7 @@ def write_binary(filename, data, channels=(), ref_channel=None):
     if not channels:
         channels = range(data.shape[1])
     n_rows = int(BUFFERSIZE / len(channels))
-    with open(filename, "wb") as f:
+    with open(filename, "ab") as f:
         for i in range(int(data.shape[0] / n_rows) + 1):
             index = i * n_rows
             buffer = data[index:index + n_rows, channels]
@@ -29,7 +29,8 @@ def write_binary(filename, data, channels=(), ref_channel=None):
             f.write(buffer.tobytes())
 
 
-def main(filename, channels=(), recordings=(), klustafiles=False, ref_channel=None):
+def main(filename, channels=(), recordings=(), klustafiles=False,
+        ref_channel=None, outfile=None):
     if recordings:
         all_data = [load(filename, x) for x in recordings]
     else:
@@ -39,19 +40,19 @@ def main(filename, channels=(), recordings=(), klustafiles=False, ref_channel=No
         n_channels = len(channels)
     else:
         n_channels = all_data[0]["data"].shape[1]
-    root_filename = os.path.splitext(filename)[0]
+    if not outfile:
+        outfile = os.path.splitext(filename)[0]
     dat_filenames = []
     for group_i, data in enumerate(all_data):
-        binary_filename = "{fname}_{i}.dat".format(fname=root_filename,
-                                                   i=group_i)
-        dat_filenames.append(binary_filename)
-        write_binary(binary_filename, data["data"], channels, ref_channel)
+        with open(outfile, "wb") as f:
+            pass #clear any data in the file
+        write_binary(outfile, data["data"], channels, ref_channel)
 
     if klustafiles:
         prb_filename = root_filename + ".prb"
         dummy_prb_file(prb_filename, n_channels)
         prm_filename = root_filename + ".prm"
-        dummy_prm_file(prm_filename, prb_filename, dat_filenames, sampling_rate,
+        dummy_prm_file(prm_filename, prb_filename, (binary_filename), sampling_rate,
                     n_channels)
 
 
@@ -78,6 +79,8 @@ if __name__ == "__main__":
     p.add_argument("--reference",
                    help="Reference channel to subtract from CHANNELS, none by default",
                    type=int)
+    p.add_argument("-o", "--outfile",
+                   help="name and path of output files root (.dat is appended)")
     options = p.parse_args()
     main(options.kwdfile, options.channels, options.recordings,
-         options.klustafiles, options.reference)
+         options.klustafiles, options.reference, options.outfile)
